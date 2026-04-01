@@ -29,12 +29,13 @@
       <h3>Question</h3>
       <p>What matters first?</p>
 
-      <ol class="choices">
-        <li>Start troubleshooting immediately</li>
-        <li>Stabilize and reduce workload</li>
-        <li>Talk to ATC and request priority</li>
-        <li>Review landing performance and diversion options</li>
-      </ol>
+      <div id="status"></div>
+
+<div id="choices" class="choices"></div>
+
+<div id="feedback" style="margin-top:10px; white-space:pre-wrap;"></div>
+
+<div id="result" style="margin-top:15px;"></div>
 
       <details class="reveal">
         <summary>Back to the Loop advice</summary>
@@ -65,8 +66,117 @@
     </footer>
   </main>
 
-  <script>
-    document.getElementById("y").textContent = new Date().getFullYear();
-  </script>
+  <script src="script.js">
+let state = {
+  aircraftControl: false,
+  situationAwareness: false,
+  workload: "High"
+};
+
+let score = {
+  flightPathManagement: 0,
+  decisionMaking: 0
+};
+
+let current = "start";
+
+const scenarios = {
+  start: {
+    text: "ECAM message appears. Cabin calls. ATC asks intentions.",
+    choices: [
+      "Start troubleshooting immediately",
+      "Stabilize and reduce workload",
+      "Talk to ATC and request priority",
+      "Review landing performance and diversion options"
+    ]
+  }
+};
+
+function renderStatus() {
+  document.getElementById("status").innerHTML = `
+    <strong>Aircraft:</strong> ${state.aircraftControl ? "✅ Stable" : "⚠️ Unstable"}<br>
+    <strong>Awareness:</strong> ${state.situationAwareness ? "✅ Good" : "⚠️ Incomplete"}<br>
+    <strong>Workload:</strong> ${state.workload}
+  `;
+}
+
+function evaluate(choice) {
+  let feedback = "";
+
+  if (choice === "Start troubleshooting immediately") {
+    feedback += "⚠️ You jumped into action without stabilizing the aircraft.\n";
+    feedback += "Workload increased.\n";
+    score.flightPathManagement -= 2;
+  }
+
+  if (choice === "Stabilize and reduce workload") {
+    state.aircraftControl = true;
+    state.workload = "Medium";
+    feedback += "✔️ Correct priority: Fly first.\n";
+    score.flightPathManagement += 2;
+  }
+
+  if (choice === "Talk to ATC and request priority") {
+    if (!state.aircraftControl) {
+      feedback += "⚠️ Communication before control.\n";
+      score.flightPathManagement -= 1;
+    } else {
+      feedback += "✔️ Communication now makes sense.\n";
+    }
+  }
+
+  if (choice === "Review landing performance and diversion options") {
+    if (!state.aircraftControl) {
+      feedback += "⚠️ Analysis before control.\n";
+      score.decisionMaking -= 1;
+    } else {
+      feedback += "✔️ Good expansion of the plan.\n";
+    }
+  }
+
+  return feedback;
+}
+
+function renderChoices() {
+  const div = document.getElementById("choices");
+  div.innerHTML = "";
+
+  scenarios.start.choices.forEach(choice => {
+    const btn = document.createElement("button");
+    btn.innerText = choice;
+
+    btn.onclick = () => {
+      const fb = evaluate(choice);
+      document.getElementById("feedback").innerText = fb;
+
+      // BACK TO THE LOOP
+      if (!state.aircraftControl) {
+        div.innerHTML = "";
+
+        const stabilizeBtn = document.createElement("button");
+        stabilizeBtn.innerText = "→ Back to the Loop: Stabilize aircraft";
+        stabilizeBtn.onclick = () => {
+          state.aircraftControl = true;
+          state.workload = "Medium";
+          render();
+        };
+
+        div.appendChild(stabilizeBtn);
+      }
+
+      renderStatus();
+    };
+
+    div.appendChild(btn);
+  });
+}
+
+function render() {
+  renderStatus();
+  renderChoices();
+}
+
+render();
+</script>
 </body>
 </html>
